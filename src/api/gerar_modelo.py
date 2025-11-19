@@ -1,3 +1,4 @@
+import pickle
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -7,7 +8,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
-import joblib
 import warnings
 
 # Ignorar warnings de convergência do modelo, comum em exemplos simples
@@ -31,14 +31,14 @@ def treinar_e_salvar_modelo():
     # =========================================================================
     # 1. Geração de Dados Fictícios (Substituir por dados reais)
     #    Novas Features:
-    #    - periodo_registro_dias (Contínuo)
+    #    - periodo_decorrido_dias (Contínuo)
     #    - suspeito_conhecido (Binário)
     #    - tem_testemunhas (Binário)
     #    - tem_imagens_cameras (Binário)
     #    - suspeito_rastreavel (Binário)
     #    - praticado_internet (Binário)
     #    - telefone_suspeito_conhecido (Binário)
-    #    - objeto_periciavel (Binário)
+    #    - vestigios_preservados (Binário)
     # =========================================================================
 
     np.random.seed(42)
@@ -46,37 +46,51 @@ def treinar_e_salvar_modelo():
 
     # Gerar dados base
     data = pd.DataFrame({
-        'periodo_registro_dias': np.random.randint(1, 60, data_size), # 1 a 60 dias
+        'periodo_decorrido_dias': np.random.randint(1, 60, data_size), # 1 a 60 dias
         'suspeito_conhecido': np.random.choice([0, 1], data_size, p=[0.7, 0.3]),
         'tem_testemunhas': np.random.choice([0, 1], data_size, p=[0.65, 0.35]),
         'tem_imagens_cameras': np.random.choice([0, 1], data_size, p=[0.75, 0.25]),
         'suspeito_rastreavel': np.random.choice([0, 1], data_size, p=[0.7, 0.3]),
-        'praticado_internet': np.random.choice([0, 1], data_size, p=[0.8, 0.2]),
-        'telefone_suspeito_conhecido': np.random.choice([0, 1], data_size, p=[0.85, 0.15]),
-        'objeto_periciavel': np.random.choice([0, 1], data_size, p=[0.6, 0.4]),
+        'vestigios_preservados': np.random.choice([0, 1], data_size, p=[0.6, 0.4]),
         # Variável Alvo inicial: 0=Baixa, 1=Média, 2=Alta
         'resolutividade': np.random.choice([0, 1, 2], data_size, p=[0.4, 0.35, 0.25]) 
     })
 
     # Ajustes para introduzir correlação (Lógica Fictícia):
+    # Esta lógica espelha as regras do endpoint /resolutividade em main.py
     
-    # Condição para Alta Resolutividade (2): 
-    # Suspeito conhecido E Suspeito rastreável E (Testemunhas OU Imagens) E Registro rápido (< 5 dias)
-    cond_alta = (data['suspeito_conhecido'] == 1) & \
-                (data['suspeito_rastreavel'] == 1) & \
-                ((data['tem_testemunhas'] == 1) | (data['tem_imagens_cameras'] == 1)) & \
-                (data['periodo_registro_dias'] < 5)
-    
-    data.loc[cond_alta, 'resolutividade'] = np.random.choice([1, 2], data[cond_alta].shape[0], p=[0.1, 0.9])
-    
-    # Condição para Baixa Resolutividade (0):
-    # Suspeito desconhecido E Ausência de Testemunhas E Registro muito lento (> 30 dias)
-    cond_baixa = (data['suspeito_conhecido'] == 0) & \
-                 (data['tem_testemunhas'] == 0) & \
-                 (data['periodo_registro_dias'] > 30)
-    
-    data.loc[cond_baixa, 'resolutividade'] = np.random.choice([0, 1], data[cond_baixa].shape[0], p=[0.8, 0.2])
+    # 1. Calcular o número de evidências para cada linha
+    evidencias_suficientes = (
+        data['tem_testemunhas'] +
+        data['tem_imagens_cameras'] +
+        data['vestigios_preservados']
+    )
 
+    # 2. Definir as condições de filtro baseadas nas regras
+
+    # Regra para Alta Resolutividade (2)
+    cond_alta = (
+        (data['periodo_decorrido_dias'] <= 5) &
+        (
+            ((data['suspeito_conhecido'] == 1) & (evidencias_suficientes >= 1)) |
+            ((data['suspeito_rastreavel'] == 1) & (evidencias_suficientes >= 2))
+        )
+    )
+
+    # Regra para Média Resolutividade (1)
+    cond_media = (
+        (
+            (data['periodo_decorrido_dias'] < 30) &
+            ((data['suspeito_conhecido'] == 1) | ((data['suspeito_rastreavel'] == 1) & (evidencias_suficientes >= 1)))
+        ) |
+        ((evidencias_suficientes >= 3) & (data['periodo_decorrido_dias'] < 60))
+    )
+
+    # 3. Aplicar as regras ao DataFrame para ajustar a variável 'resolutividade'
+    # Aplicamos da mais específica (Alta) para a menos específica.
+    # A condição `~cond_alta` garante que não sobrescrevemos os casos de 'Alta'.
+    data.loc[cond_media & ~cond_alta, 'resolutividade'] = 1
+    data.loc[cond_alta, 'resolutividade'] = 2
 
     # =========================================================================
     # 2. Pré-processamento (Pipeline)
@@ -140,8 +154,9 @@ def treinar_e_salvar_modelo():
     # 5. Salvar o Modelo Treinado
     # =========================================================================
     try:
-        joblib.dump(model, 'resolutividade_model_multiclass_generico.pkl')
-        print("\nModelo e Pipeline salvos em 'resolutividade_model_multiclass_generico.pkl'")
+        with open("resolutividade_model_multiclass_generico.pkl", "wb") as f:
+            pickle.dump(model, f)
+            print("\nModelo e Pipeline salvos em 'resolutividade_model_multiclass_generico.pkl'")
     except Exception as e:
         print(f"Erro ao salvar o modelo: {e}")
 
@@ -149,16 +164,14 @@ def treinar_e_salvar_modelo():
     # 6. Exemplo de Previsão em Novos Dados
     # =========================================================================
 
-    # Cenário otimista (Alta Resolutividade)
+    # Cenário otimista (Alta Resolutividade) - Usando as mesmas colunas do treinamento
     novo_incidente = pd.DataFrame({
-        'periodo_registro_dias': [1], 
+        'periodo_decorrido_dias': [1], 
         'suspeito_conhecido': [1], 
         'tem_testemunhas': [1], 
         'tem_imagens_cameras': [0],
         'suspeito_rastreavel': [1],
-        'praticado_internet': [0],
-        'telefone_suspeito_conhecido': [1],
-        'objeto_periciavel': [1]
+        'vestigios_preservados': [1]
     })
 
     # Previsão de probabilidades para todas as classes
