@@ -9,8 +9,8 @@ class OcorrenciaRequest(BaseModel):
     suspeito_rastreavel: bool = Field(..., description="Se o suspeito é rastreável")
     tem_vestigios_preservados: bool = Field(..., description="Se há vestígios preservados para perícia")
     
-    model_config = {
-        "json_schema_extra": {
+    class Config:
+        schema_extra = {
             "example": {
                 "periodo_decorrido_dias": 5,
                 "suspeito_conhecido": True,
@@ -20,12 +20,7 @@ class OcorrenciaRequest(BaseModel):
                 "tem_vestigios_preservados": False
             }
         }
-    }
 
-class PrevisaoResponse(BaseModel):
-    """Define a estrutura de dados da resposta da previsão."""
-    resolutividade: str
-    motivo: str
 
     
 

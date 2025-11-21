@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field 
 from src.models.schemas import OcorrenciaRequest
 import logging
 
