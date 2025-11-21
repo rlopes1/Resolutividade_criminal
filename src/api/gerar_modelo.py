@@ -1,7 +1,8 @@
-import pickle
+import joblib
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.preprocessing import StandardScaler
@@ -19,30 +20,18 @@ RESOLUTIVIDADE_CLASSES = {
     1: "Média",
     2: "Alta"
 }
+FEATURES = [
+    'periodo_decorrido_dias', 'suspeito_conhecido', 'tem_testemunhas',
+    'tem_imagens_cameras', 'suspeito_rastreavel', 'vestigios_preservados'
+]
+TARGET = 'resolutividade'
+MODEL_FILENAME = "resolutividade_model.pkl"
 
-def treinar_e_salvar_modelo():
-    """
-    Simula o carregamento, pré-processamento e treinamento de um classificador
-    multiclasse para prever a resolutividade de ocorrências policiais usando
-    o novo conjunto de features genéricas.
-    """
-    print("Iniciando a simulação de treinamento do modelo multiclasse...")
+def gerar_dados(data_size=500):
+    """Gera um DataFrame de dados sintéticos para o treinamento do modelo."""
+    print("Iniciando a simulação de treinamento do modelo ...")
 
-    # =========================================================================
-    # 1. Geração de Dados Fictícios (Substituir por dados reais)
-    #    Novas Features:
-    #    - periodo_decorrido_dias (Contínuo)
-    #    - suspeito_conhecido (Binário)
-    #    - tem_testemunhas (Binário)
-    #    - tem_imagens_cameras (Binário)
-    #    - suspeito_rastreavel (Binário)
-    #    - praticado_internet (Binário)
-    #    - telefone_suspeito_conhecido (Binário)
-    #    - vestigios_preservados (Binário)
-    # =========================================================================
-
-    np.random.seed(42)
-    data_size = 500
+    np.random.seed(42)  
 
     # Gerar dados base
     data = pd.DataFrame({
@@ -53,22 +42,13 @@ def treinar_e_salvar_modelo():
         'suspeito_rastreavel': np.random.choice([0, 1], data_size, p=[0.7, 0.3]),
         'vestigios_preservados': np.random.choice([0, 1], data_size, p=[0.6, 0.4]),
         # Variável Alvo inicial: 0=Baixa, 1=Média, 2=Alta
-        'resolutividade': np.random.choice([0, 1, 2], data_size, p=[0.4, 0.35, 0.25]) 
+        TARGET: np.random.choice(list(RESOLUTIVIDADE_CLASSES.keys()), data_size, p=[0.4, 0.35, 0.25])
     })
 
-    # Ajustes para introduzir correlação (Lógica Fictícia):
-    # Esta lógica espelha as regras do endpoint /resolutividade em main.py
-    
-    # 1. Calcular o número de evidências para cada linha
+    # Lógica para introduzir correlação entre features e o alvo
     evidencias_suficientes = (
-        data['tem_testemunhas'] +
-        data['tem_imagens_cameras'] +
-        data['vestigios_preservados']
+        data['tem_testemunhas'] + data['tem_imagens_cameras'] + data['vestigios_preservados']
     )
-
-    # 2. Definir as condições de filtro baseadas nas regras
-
-    # Regra para Alta Resolutividade (2)
     cond_alta = (
         (data['periodo_decorrido_dias'] <= 5) &
         (
@@ -76,8 +56,6 @@ def treinar_e_salvar_modelo():
             ((data['suspeito_rastreavel'] == 1) & (evidencias_suficientes >= 2))
         )
     )
-
-    # Regra para Média Resolutividade (1)
     cond_media = (
         (
             (data['periodo_decorrido_dias'] < 30) &
@@ -85,108 +63,86 @@ def treinar_e_salvar_modelo():
         ) |
         ((evidencias_suficientes >= 3) & (data['periodo_decorrido_dias'] < 60))
     )
-
-    # 3. Aplicar as regras ao DataFrame para ajustar a variável 'resolutividade'
-    # Aplicamos da mais específica (Alta) para a menos específica.
-    # A condição `~cond_alta` garante que não sobrescrevemos os casos de 'Alta'.
-    data.loc[cond_media & ~cond_alta, 'resolutividade'] = 1
-    data.loc[cond_alta, 'resolutividade'] = 2
-
-    # =========================================================================
-    # 2. Pré-processamento (Pipeline)
-    # =========================================================================
-
-    # Separar X (features) e y (target)
-    X = data.drop('resolutividade', axis=1)
-    y = data['resolutividade']
-
-    # Todas as features são tratadas como numéricas/binárias e serão escalonadas
-    colunas_features = list(X.columns)
     
-    # Criar transformador: StandardScaler para todas as features
-    # (Mesmo para binárias, ajuda a centralizar os dados no pipeline)
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', StandardScaler(), colunas_features)
-        ],
-        remainder='passthrough' # Não deve haver colunas restantes
+    # Aplica as regras para ajustar a variável alvo, da mais específica para a menos
+    data.loc[cond_alta, TARGET] = 2
+    data.loc[cond_media & ~cond_alta, TARGET] = 1
+    
+    return data
+
+def treinar_avaliar_modelo(data):
+    """Treina, avalia e salva o modelo de classificação."""
+    print("Iniciando o treinamento do modelo...")
+
+    X = data[FEATURES]
+    y = data[TARGET]
+
+    # Dividir os dados em treinamento e teste, mantendo a proporção das classes
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # =========================================================================
-    # 3. Definição do Modelo (Regressão Logística Multiclasse)
-    # =========================================================================
+    # Definição do Modelo RandomForestClassifier
+    # 'class_weight' é crucial para dados desbalanceados.
+    model = RandomForestClassifier(
+        n_estimators=150,
+        max_depth=10,
+        random_state=42,
+        class_weight='balanced',
+        n_jobs=-1 # Usa todos os processadores disponíveis
+    )
 
-    # Usando Regressão Logística com multi_class='multinomial' para lidar com 3 classes
-    model = Pipeline(steps=[
-        ('preprocessor', preprocessor),
-        ('classifier', LogisticRegression(
-            random_state=42,
-            multi_class='multinomial', 
-            solver='lbfgs', 
-            max_iter=500 # Aumentar iterações para garantir convergência com mais features
-        ))
-    ])
-
-    # Dividir os dados em treinamento e teste
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-
-
-    # =========================================================================
-    # 4. Treinamento e Avaliação
-    # =========================================================================
-
-    print("\nTreinando o modelo...")
+    # Treinamento
     model.fit(X_train, y_train)
     print("Treinamento concluído.")
 
-    # Fazer previsões no conjunto de teste
+    # Avaliação
     y_pred = model.predict(X_test)
-
-    # Avaliar o desempenho
     accuracy = accuracy_score(y_test, y_pred)
-
-    print("\n--- Avaliação do Modelo Multiclasse (Novas Features) ---")
-    print(f"Acurácia no conjunto de teste: {accuracy:.4f}")
-    print("\nRelatório de Classificação (Classes 0=Baixa, 1=Média, 2=Alta):")
-    print(classification_report(y_test, y_pred, target_names=list(RESOLUTIVIDADE_CLASSES.values())))
-
-    # =========================================================================
-    # 5. Salvar o Modelo Treinado
-    # =========================================================================
-    try:
-        with open("resolutividade_model_multiclass_generico.pkl", "wb") as f:
-            pickle.dump(model, f)
-            print("\nModelo e Pipeline salvos em 'resolutividade_model_multiclass_generico.pkl'")
-    except Exception as e:
-        print(f"Erro ao salvar o modelo: {e}")
-
-    # =========================================================================
-    # 6. Exemplo de Previsão em Novos Dados
-    # =========================================================================
-
-    # Cenário otimista (Alta Resolutividade) - Usando as mesmas colunas do treinamento
-    novo_incidente = pd.DataFrame({
-        'periodo_decorrido_dias': [1], 
-        'suspeito_conhecido': [1], 
-        'tem_testemunhas': [1], 
-        'tem_imagens_cameras': [0],
-        'suspeito_rastreavel': [1],
-        'vestigios_preservados': [1]
-    })
-
-    # Previsão de probabilidades para todas as classes
-    previsao_proba_array = model.predict_proba(novo_incidente)[0]
-    previsao_classe = model.predict(novo_incidente)[0]
     
+    print("\n--- Avaliação do Modelo ---")
+    print(f"Acurácia no conjunto de teste: {accuracy:.4f}")
+    print("\nRelatório de Classificação:")
+    print(classification_report(
+        y_test, y_pred, target_names=list(RESOLUTIVIDADE_CLASSES.values())
+    ))
+
+    # Salvar o modelo treinado usando joblib
+    joblib.dump(model, MODEL_FILENAME)
+    print(f"\nModelo salvo em '{MODEL_FILENAME}'")
+    
+    return model
+
+def prever_novo_caso(model):
+    """Demonstra a previsão de um novo caso com o modelo treinado."""
+    # Cenário otimista para teste
+    novo_incidente = pd.DataFrame([{
+        'periodo_decorrido_dias': 1, 
+        'suspeito_conhecido': 1, 
+        'tem_testemunhas': 1, 
+        'tem_imagens_cameras': 0,
+        'suspeito_rastreavel': 1,
+        'vestigios_preservados': 1
+    }], columns=FEATURES)
+
+    # Previsão de classe e probabilidades
+    previsao_classe = model.predict(novo_incidente)[0]
+    previsao_proba = model.predict_proba(novo_incidente)[0]
     status = RESOLUTIVIDADE_CLASSES.get(previsao_classe, "Desconhecido")
 
-    print("\n--- Previsão de Novo Incidente (Cenário Otimista) ---")
+    print("\n--- Exemplo de Previsão de Novo Incidente ---")
     print(f"Dados do Incidente: {novo_incidente.to_dict(orient='records')[0]}")
     print(f"Classe Prevista: {status}")
     print("\nProbabilidades por Classe:")
-    print(f"  {RESOLUTIVIDADE_CLASSES[0]}: {previsao_proba_array[0] * 100:.2f}%")
-    print(f"  {RESOLUTIVIDADE_CLASSES[1]}: {previsao_proba_array[1] * 100:.2f}%")
-    print(f"  {RESOLUTIVIDADE_CLASSES[2]}: {previsao_proba_array[2] * 100:.2f}%")
+    for i, prob in enumerate(previsao_proba):
+        print(f"  {RESOLUTIVIDADE_CLASSES[i]}: {prob * 100:.2f}%")
 
 if __name__ == "__main__":
-    treinar_e_salvar_modelo()
+    # 1. Gerar dados
+    dados_ocorrencias = gerar_dados()
+    
+    # 2. Treinar, avaliar e salvar o modelo
+    modelo_treinado = treinar_avaliar_modelo(dados_ocorrencias)
+    
+    # 3. Demonstrar uma previsão
+    prever_novo_caso(modelo_treinado)
