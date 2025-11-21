@@ -1,9 +1,7 @@
 from pydantic import BaseModel, Field
 
 class OcorrenciaRequest(BaseModel):
-    """
-    Modelo de entrada - ADAPTE para seu projeto!
-    """
+    
     periodo_decorrido_dias: int = Field(...,ge=0, description="Número de dias do fato até o registro da ocorrência")
     suspeito_conhecido: bool = Field(..., description="Se o suspeito foi identificado")
     tem_testemunhas: bool = Field(..., description="Se há testemunhas do fato")

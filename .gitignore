@@ -29,3 +29,6 @@ Thumbs.db
 
 # Environment
 .env
+
+# Arquivos de modelo gerados
+*.pkl

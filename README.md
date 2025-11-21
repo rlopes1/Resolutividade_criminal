@@ -4,74 +4,69 @@
 
 Esta API tem como objetivo prever o potencial de resolução (resolutividade) de uma ocorrência criminal com base em informações iniciais. A análise classifica a ocorrência em **Alta**, **Média** ou **Baixa** resolutividade, fornecendo um indicativo da probabilidade de sucesso na investigação.
 
-A aplicação utiliza uma abordagem baseada em regras, mas também inclui um script para treinar um modelo de Machine Learning (Regressão Logística) que pode ser integrado futuramente para previsões mais robustas.
+Atualmente, a API utiliza um conjunto de **regras de negócio** para fazer a classificação. O projeto também inclui um script para treinar um modelo de Machine Learning (`RandomForestClassifier`) que pode ser integrado futuramente para previsões mais robustas.
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3.10+**
 - **FastAPI**: Para a construção da API.
-- **Pydantic**: Para validação de dados.
-- **Scikit-learn**: Para o treinamento do modelo de Machine Learning.
-- **Joblib**: Para salvar e carregar o modelo treinado.
+- **Pydantic V2**: Para validação de dados.
 - **Uvicorn**: Como servidor ASGI para a API.
+- **Pytest**: Para a execução dos testes automatizados.
+- **Scikit-learn & Joblib**: Utilizados apenas no script de treinamento do modelo de ML.
 
 ## 📂 Estrutura do Projeto
 
 ```
-template/
+.
 ├── src/
 │   ├── api/
-│   │   └── main.py          # Endpoints da API
-│   ├── models/
-│   │   └── schemas.py       # Modelos Pydantic
-│   └── config.py            # Configurações
+│   │   ├── main.py            # Lógica e endpoints da API (baseada em regras)
+│   │   └── gerar_modelo.py    # Script para treinar o modelo de ML
+│   └── models/
+│       └── schemas.py         # Modelos de dados Pydantic
 ├── tests/
-│   └── test_template.py     # Testes automatizados
-├── requirements.txt
-└── .gitignore
+│   ├── test_main.py         # Testes para a API
+│   └── test_modelo.py       # Testes para o script de treinamento
+├── requirements.txt         # Dependências do projeto
+└── README.md
 ```
 
-## Como Usar
+## 🚀 Como Executar
 
-### 1. Instalar dependências
+### 1. Instalar Dependências
 
+Certifique-se de que você está na pasta raiz do projeto e execute:
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 2. Rodar a API
 
+Para iniciar o servidor da API em modo de desenvolvimento (com recarregamento automático):
 ```bash
 uvicorn src.api.main:app --reload
 ```
 
-### 3. Acessar documentação
+### 3. Acessar a Documentação Interativa
 
-http://localhost:8000/docs
+Com o servidor rodando, acesse a documentação gerada automaticamente pelo FastAPI para interagir com os endpoints:
+[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-### 4. Rodar testes
+## ✅ Testes
+
+Para garantir a qualidade e o funcionamento correto do código, execute os testes automatizados com o Pytest:
 
 ```bash
-pytest tests/ -v
+pytest
 ```
 
-## 🔧 Customização
+## 🤖 Treinamento do Modelo (Opcional)
 
-### Passo 1: Adapte os Schemas
+Se desejar treinar uma nova versão do modelo de Machine Learning, execute o seguinte script a partir da pasta raiz:
 
-Edite `src/models/schemas.py` com seus modelos de dados.
+```bash
+python src/api/gerar_modelo.py
+```
 
-### Passo 2: Implemente sua Lógica
-
-Edite `src/api/main.py` e substitua a lógica do endpoint `/calcular`.
-
-### Passo 3: Crie Testes
-
-Edite `tests/test_template.py` para testar sua lógica.
-
-## Exemplo Atual
-
-API de soma simples:
-- **POST /calcular**: Soma dois números
-
-Substitua isso pela sua lógica de negócio!
+Isso irá gerar um novo arquivo `resolutividade_model.pkl` na raiz do projeto. Para que a API utilize este modelo, a lógica em `src/api/main.py` precisaria ser adaptada para carregá-lo e usá-lo nas previsões, em vez das regras de negócio atuais.
