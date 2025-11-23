@@ -27,7 +27,7 @@ FEATURES = [
 TARGET = 'resolutividade'
 MODEL_FILENAME = "resolutividade_model.pkl"
 
-def gerar_dados(data_size=500):
+def gerar_dados(data_size=3500):
     """Gera um DataFrame de dados sintéticos para o treinamento do modelo."""
     print("Iniciando a simulação de treinamento do modelo ...")
 

@@ -5,9 +5,9 @@ class OcorrenciaRequest(BaseModel):
     periodo_decorrido_dias: int = Field(...,ge=0, description="Número de dias do fato até o registro da ocorrência")
     suspeito_conhecido: bool = Field(..., description="Se o suspeito foi identificado")
     tem_testemunhas: bool = Field(..., description="Se há testemunhas do fato")
-    tem_imagens_capturadas: bool = Field(..., description="Se há imagens capturadas do fato")
+    tem_imagens_cameras: bool = Field(..., description="Se há imagens capturadas do fato")
     suspeito_rastreavel: bool = Field(..., description="Se o suspeito é rastreável")
-    tem_vestigios_preservados: bool = Field(..., description="Se há vestígios preservados para perícia")
+    vestigios_preservados: bool = Field(..., description="Se há vestígios preservados para perícia")
     
     model_config = {
         "json_schema_extra": {
@@ -15,9 +15,9 @@ class OcorrenciaRequest(BaseModel):
                 "periodo_decorrido_dias": 5,
                 "suspeito_conhecido": True,
                 "tem_testemunhas": False,
-                "tem_imagens_capturadas": True,
+                "tem_imagens_cameras": True,
                 "suspeito_rastreavel": True,
-                "tem_vestigios_preservados": False
+                "vestigios_preservados": False
             }
         }
     }

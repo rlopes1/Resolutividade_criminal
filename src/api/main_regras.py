@@ -26,15 +26,15 @@ def prever_resolutividade(ocorrencia: OcorrenciaRequest) -> PrevisaoResponse:
     # Contagem de evidências físicas e testemunhais
     total_evidencias = sum([
         ocorrencia.tem_testemunhas,
-        ocorrencia.tem_imagens_capturadas,
-        ocorrencia.tem_vestigios_preservados
+        ocorrencia.tem_imagens_cameras,
+        ocorrencia.vestigios_preservados
     ])
 
     # --- Regras de Negócio para Classificação ---
 
     # REGRA 1: ALTA RESOLUTIVIDADE
     # Fato recente com suspeito conhecido/rastreável e alguma evidência.
-    if ocorrencia.periodo_decorrido_dias <= 7 and (ocorrencia.suspeito_conhecido or ocorrencia.suspeito_rastreavel) and total_evidencias >= 1:
+    if ocorrencia.periodo_decorrido_dias <= 5 and (ocorrencia.suspeito_conhecido or ocorrencia.suspeito_rastreavel) and total_evidencias >= 1:
         return PrevisaoResponse(
             resolutividade="Alta",
             motivo="Fato recente com identificação/rastreio do suspeito e evidências disponíveis."
