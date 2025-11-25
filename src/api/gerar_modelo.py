@@ -110,7 +110,7 @@ def treinar_avaliar_modelo(data):
     # Salvar o modelo treinado usando joblib
     with open(MODEL_FILENAME, "wb") as f:
         joblib.dump(model, f)
-    print(f"\nModelo salvo em '{MODEL_FILENAME}'")
+        print(f"\nModelo salvo em '{MODEL_FILENAME}'")
     
     return model
 
