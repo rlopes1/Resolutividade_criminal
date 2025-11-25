@@ -1,34 +1,45 @@
-# API de Análise de Resolutividade Criminal
+# Análise de Potencial de Investigação
 
-## 🎯 Objetivo
+Esta aplicação funciona como uma ferramenta de apoio à decisão, projetada para auxiliar na avaliação do **potencial de investigação** de uma ocorrência recém-registrada. Com base nas informações iniciais, o sistema classifica a ocorrência em **Alta**, **Média** ou **Baixa** viabilidade, fornecendo um indicativo da probabilidade de uma investigação futura ser bem-sucedida. O objetivo é otimizar a alocação de recursos e direcionar o foco para os casos com maior potencial de avanço.
 
-Esta API tem como objetivo prever o potencial de resolução (resolutividade) de uma ocorrência criminal com base em informações iniciais. A análise classifica a ocorrência em **Alta**, **Média** ou **Baixa** resolutividade, fornecendo um indicativo da probabilidade de sucesso na investigação.
+A aplicação permite a análise de duas formas distintas:
+1.  **API REST**: Com endpoints separados para previsões baseadas em **regras de negócio** e em um **modelo de Machine Learning**.
+2.  **Interface Web (UI)**: Uma aplicação interativa construída com Streamlit que permite ao usuário inserir os dados da ocorrência e obter a previsão de forma visual.
 
-Atualmente, a API utiliza um conjunto de **regras de negócio** para fazer a classificação. O projeto também inclui um script para treinar um modelo de Machine Learning (`RandomForestClassifier`) que pode ser integrado futuramente para previsões mais robustas.
+## 👥 Colaboradores
+
+- Rodrigo Taboada Macedo
+- Valdeci Cardoso da Mata Filho
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3.10+**
 - **FastAPI**: Para a construção da API.
+- **Streamlit**: Para a criação da interface web.
 - **Pydantic V2**: Para validação de dados.
 - **Uvicorn**: Como servidor ASGI para a API.
 - **Pytest**: Para a execução dos testes automatizados.
-- **Scikit-learn & Joblib**: Utilizados apenas no script de treinamento do modelo de ML.
+- **Scikit-learn & Joblib**: Para o treinamento e uso do modelo de ML.
+- **Pandas**: Para manipulação de dados.
 
 ## 📂 Estrutura do Projeto
 
 ```
 .
 ├── src/
+│   ├── app.py                 # Aplicação principal da interface web (Streamlit)
 │   ├── api/
-│   │   ├── main.py            # Lógica e endpoints da API (baseada em regras)
+│   │   ├── main_regras.py     # Endpoint da API (baseado em regras)
+│   │   ├── main_modelo.py     # Endpoint da API (baseado em ML)
 │   │   └── gerar_modelo.py    # Script para treinar o modelo de ML
-│   └── models/
-│       └── schemas.py         # Modelos de dados Pydantic
+│   ├── models/
+│   │   └── schemas.py         # Modelos de dados Pydantic
+│   └── pages/
+│       ├── previsao_com_regras.py # Página da UI para previsão com regras
+│       └── previsao_com_modelo.py # Página da UI para previsão com modelo
 ├── tests/
-│   ├── test_main.py         # Testes para a API
-│   └── test_modelo.py       # Testes para o script de treinamento
-├── requirements.txt         # Dependências do projeto
+│   └── test_main.py           # Testes para a API
+├── requirements.txt           # Dependências do projeto
 └── README.md
 ```
 
@@ -41,17 +52,49 @@ Certifique-se de que você está na pasta raiz do projeto e execute:
 pip install -r requirements.txt
 ```
 
-### 2. Rodar a API
+### 2. Rodando os Serviços Individualmente
 
-Para iniciar o servidor da API em modo de desenvolvimento (com recarregamento automático):
+Você pode iniciar cada serviço separadamente, o que é útil para focar em uma parte específica da aplicação.
+
+**Para a Interface Web (Streamlit):**
 ```bash
-uvicorn src.api.main:app --reload
+streamlit run src/app.py
+```
+Acesse a interface em [http://localhost:8501](http://localhost:8501).
+
+**Para a API de Regras:**
+```bash
+uvicorn src.api.main_regras:app --reload --port 8001
+```
+Acesse a documentação em [http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs).
+
+**Para a API de Modelo ML:**
+```bash
+uvicorn src.api.main_modelo:app --reload --port 8002
+```
+Acesse a documentação em [http://127.0.0.1:8002/docs](http://127.0.0.1:8002/docs).
+
+
+### 3. Rodando o Ambiente Completo (Desenvolvimento)
+
+Para ter a experiência completa da aplicação, com a interface web se comunicando com as APIs, você precisará rodar todos os serviços ao mesmo tempo. A forma mais simples de fazer isso é usando múltiplos terminais.
+
+Abra três terminais separados na pasta raiz do projeto e execute um comando em cada um:
+
+**Terminal 1 (Interface Web):**
+```bash
+streamlit run src/app.py
 ```
 
-### 3. Acessar a Documentação Interativa
+**Terminal 2 (API de Regras):**
+```bash
+uvicorn src.api.main_regras:app --reload --port 8001
+```
 
-Com o servidor rodando, acesse a documentação gerada automaticamente pelo FastAPI para interagir com os endpoints:
-[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+**Terminal 3 (API de Modelo ML):**
+```bash
+uvicorn src.api.main_modelo:app --reload --port 8002
+```
 
 ## ✅ Testes
 
@@ -61,7 +104,7 @@ Para garantir a qualidade e o funcionamento correto do código, execute os teste
 pytest
 ```
 
-## 🤖 Treinamento do Modelo (Opcional)
+## 🤖 Treinamento do Modelo
 
 Se desejar treinar uma nova versão do modelo de Machine Learning, execute o seguinte script a partir da pasta raiz:
 
@@ -69,4 +112,4 @@ Se desejar treinar uma nova versão do modelo de Machine Learning, execute o seg
 python src/api/gerar_modelo.py
 ```
 
-Isso irá gerar um novo arquivo `resolutividade_model.pkl` na raiz do projeto. Para que a API utilize este modelo, a lógica em `src/api/main.py` precisaria ser adaptada para carregá-lo e usá-lo nas previsões, em vez das regras de negócio atuais.
+Isso irá gerar um novo arquivo `resolutividade_model.pkl` na raiz do projeto, que é utilizado pela API de Machine Learning e pela interface web.
