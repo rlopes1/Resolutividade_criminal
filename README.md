@@ -6,6 +6,11 @@ A aplicação permite a análise de duas formas distintas:
 1.  **API REST**: Com endpoints separados para previsões baseadas em **regras de negócio** e em um **modelo de Machine Learning**.
 2.  **Interface Web (UI)**: Uma aplicação interativa construída com Streamlit que permite ao usuário inserir os dados da ocorrência e obter a previsão de forma visual.
 
+## 👥 Colaboradores
+
+- Rodrigo Taboada Macedo
+- Valdeci Cardoso da Mata Filho
+
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3.10+**
