@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from src.api.main import app
+from src.api.main_regras import app
 
 client = TestClient(app)
 
@@ -18,9 +18,9 @@ def test_previsao_resolutividade_alta():
         "periodo_decorrido_dias": 1,
         "suspeito_conhecido": 1,
         "tem_testemunhas": 1,
-        "tem_imagens_cameras": 0,
+        "tem_imagens_capturadas": 0,
         "suspeito_rastreavel": 1,
-        "vestigios_preservados": 1
+        "tem_vestigios_preservados": 1
     }
     response = client.post("/prever", json=payload)
     assert response.status_code == 200
@@ -37,9 +37,9 @@ def test_previsao_resolutividade_baixa():
         "periodo_decorrido_dias": 50,
         "suspeito_conhecido": 0,
         "tem_testemunhas": 0,
-        "tem_imagens_cameras": 0,
+        "tem_imagens_capturadas": 0,
         "suspeito_rastreavel": 0,
-        "vestigios_preservados": 0
+        "tem_vestigios_preservados": 0
     }
     response = client.post("/prever", json=payload)
     assert response.status_code == 200

@@ -27,7 +27,7 @@ FEATURES = [
 TARGET = 'resolutividade'
 MODEL_FILENAME = "resolutividade_model.pkl"
 
-def gerar_dados(data_size=500):
+def gerar_dados(data_size=3500):
     """Gera um DataFrame de dados sintéticos para o treinamento do modelo."""
     print("Iniciando a simulação de treinamento do modelo ...")
 
@@ -108,7 +108,8 @@ def treinar_avaliar_modelo(data):
     ))
 
     # Salvar o modelo treinado usando joblib
-    joblib.dump(model, MODEL_FILENAME)
+    with open(MODEL_FILENAME, "wb") as f:
+        joblib.dump(model, f)
     print(f"\nModelo salvo em '{MODEL_FILENAME}'")
     
     return model
